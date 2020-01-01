@@ -2,6 +2,7 @@ const express = require('express')
 const bodyParser = require('body-parser')
 const bcrypt = require('bcrypt')
 const knex = require('knex')
+const cors = require('cors')
 
 const db = knex({
   client: 'pg',
@@ -16,6 +17,7 @@ const db = knex({
 const app = express();
 
 app.use(bodyParser.json());
+app.use(cors());
 
 app.get('/', (req, res) => {
   res.send('Hello World!')
@@ -90,6 +92,107 @@ app.post('/login', (req, res) => {
     jsonResp.status = "failed"
     jsonResp.info = "login invalid"
     res.status(401).send(jsonResp)  
+  })
+});
+
+app.post('/newTask', (req, res) => {
+  var jsonResp = {}
+  const { Task, DueDate, Category, Status, UserId } = req.body;
+  db.insert({
+    task: Task,
+    category: Category,
+    status: Status,
+    dueDate: DueDate,
+    userId: UserId
+  })
+  .into("task")
+  .returning('*')
+  .then(task => {
+    jsonResp.status = "success"
+    jsonResp.info = "task created"
+    jsonResp.data = task[0]
+    res.status(200).send(jsonResp);
+  })
+  .catch(err => {
+    console.log(err);
+    jsonResp.status = "failed"
+    jsonResp.info = "task not created"
+    res.status(400).send(jsonResp);
+  })
+});
+
+app.get('/allTask/:userId', (req, res) => {
+  var jsonResp = {}
+  db.select('task')
+  .from('task')
+  .where('userId', '=', req.params.userId)
+  .then(data => {
+    if(data.length == 0) {
+      jsonResp.status = "success"
+      jsonResp.info = "no task found"
+      res.status(200).send(jsonResp);  
+    } else {
+      jsonResp.status = "success"
+      jsonResp.info = "task found"
+      jsonResp.data = data
+      res.status(200).send(jsonResp);  
+    }
+  })
+  .catch(err => {
+    console.log(err);
+    jsonResp.status = "failed"
+    jsonResp.info = "no task found"
+    res.status(400).send(jsonResp);
+  })  
+});
+
+app.get('/taskBasedOnStatus/:userId/:status', (req, res) => {
+  var jsonResp = {}
+  db.select('task')
+  .from('task')
+  .where('status', '=', req.params.status)
+  .where('userId', '=', req.params.userId)
+  .then(data => {
+    if(data.length == 0) {
+      jsonResp.status = "success"
+      jsonResp.info = "no task found"
+      res.status(200).send(jsonResp);  
+    } else {
+      jsonResp.status = "success"
+      jsonResp.info = "task found"
+      jsonResp.data = data
+      res.status(200).send(jsonResp);  
+    }
+  })
+  .catch(err => {
+    console.log(err);
+    jsonResp.status = "failed"
+    jsonResp.info = "no task found"
+    res.status(400).send(jsonResp);
+  })  
+});
+
+app.put('/updateTaskStatus', (req, res) => {
+  var jsonResp = {}
+  const { userId, status, taskId } = req.body
+  db.update({
+    status: status
+  })
+  .where('userId', '=', userId)
+  .where('taskId', '=', taskId)
+  .into('task')
+  .returning('*')
+  .then(data => {
+    jsonResp.status = "success"
+    jsonResp.info = "task updated"
+    jsonResp.data = data
+    res.status(200).send(jsonResp);  
+  })
+  .catch(err => {
+    console.log(err);
+    jsonResp.status = "failed"
+    jsonResp.info = "task not updated"
+    res.status(400).send(jsonResp);
   })
 });
 
