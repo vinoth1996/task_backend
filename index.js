@@ -66,7 +66,7 @@ app.post('/login', (req, res) => {
   .then(data => {
     const isValid = bcrypt.compareSync(req.body.Password, data[0].hash)
     if(isValid) {
-      return db.select('EmailId', 'UserName')
+      return db.select('EmailId', 'UserName', 'id')
       .from('user')
       .where('EmailId', '=', req.body.EmailId)
       .then(user => {
